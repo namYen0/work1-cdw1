@@ -3,8 +3,13 @@
 session_start();
 
 require_once 'models/UserModel.php';
-$userModel = new UserModel();
 
+// THÊM DÒNG NÀY: Kết nối Redis
+require_once 'configs/redis.php';
+$redis = new Redis();
+$redis->connect(REDIS_HOST, REDIS_PORT);
+
+$userModel = new UserModel();
 
 if (!empty($_POST['submit'])) {
     $users = [
@@ -16,34 +21,48 @@ if (!empty($_POST['submit'])) {
         //Login successful
         $_SESSION['id'] = $user[0]['id'];
 
+        // THÊM ĐOẠN NÀY: Lưu thông tin vào Redis
+        $sessionId = session_id();
+        $userData = [
+            'user_id' => $user[0]['id'],
+            'username' => $user[0]['name'],
+            'login_time' => time()
+        ];
+        $redis->hMSet("user_session:$sessionId", $userData);
+        $redis->expire("user_session:$sessionId", 3600); // TTL 1 giờ
+
         $_SESSION['message'] = 'Login successful';
         header('location: list_users.php');
-    }else {
+        exit(); // Thêm exit sau header
+    } else {
         //Login failed
         $_SESSION['message'] = 'Login failed';
     }
-
 }
 
+// Đóng kết nối Redis
+$redis->close();
 ?>
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>User form</title>
     <?php include 'views/meta.php' ?>
 </head>
+
 <body>
-<?php include 'views/header.php'?>
+    <?php include 'views/header.php' ?>
 
     <div class="container">
         <div id="loginbox" style="margin-top:50px;" class="mainbox col-md-6 col-md-offset-3 col-sm-8 col-sm-offset-2">
-            <div class="panel panel-info" >
+            <div class="panel panel-info">
                 <div class="panel-heading">
                     <div class="panel-title">Login</div>
                     <div style="float:right; font-size: 80%; position: relative; top:-10px"><a href="#">Forgot password?</a></div>
                 </div>
 
-                <div style="padding-top:30px" class="panel-body" >
+                <div style="padding-top:30px" class="panel-body">
                     <form method="post" class="form-horizontal" role="form">
 
                         <div class="margin-bottom-25 input-group">
@@ -71,10 +90,10 @@ if (!empty($_POST['submit'])) {
 
                         <div class="form-group">
                             <div class="col-md-12 control">
-                                    Don't have an account!
-                                    <a href="form_user.php">
-                                        Sign Up Here
-                                    </a>
+                                Don't have an account!
+                                <a href="form_user.php">
+                                    Sign Up Here
+                                </a>
                             </div>
                         </div>
                     </form>
@@ -84,4 +103,5 @@ if (!empty($_POST['submit'])) {
     </div>
 
 </body>
+
 </html>
