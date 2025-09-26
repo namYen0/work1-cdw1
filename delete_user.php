@@ -1,13 +1,19 @@
 <?php
+session_start();
+
+if (empty($_SESSION['id'])) {
+    header('location: login.php');
+    exit;
+}
+
 require_once 'models/UserModel.php';
 $userModel = new UserModel();
 
-$user = NULL; //Add new user
-$id = NULL;
+$id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 
-if (!empty($_GET['id'])) {
-    $id = $_GET['id'];
-    $userModel->deleteUserById($id);//Delete existing user
+if ($id !== false && $id !== null) {
+    $userModel->deleteUserById($id);
 }
+
 header('location: list_users.php');
-?>
+exit;

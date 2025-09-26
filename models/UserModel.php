@@ -2,20 +2,38 @@
 
 require_once 'BaseModel.php';
 
-class UserModel extends BaseModel {
+class UserModel extends BaseModel
+{
 
-    public function findUserById($id) {
-        $sql = 'SELECT * FROM users WHERE id = '.$id;
-        $user = $this->select($sql);
-
-        return $user;
+    public function findUserById($id)
+    {
+        $sql = 'SELECT * FROM users WHERE id = ?';
+        $stmt = self::$_connection->prepare($sql);
+        $stmt->bind_param('i', $id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $rows = [];
+        while ($row = $result->fetch_assoc()) {
+            $rows[] = $row;
+        }
+        $stmt->close();
+        return $rows;
     }
 
-    public function findUser($keyword) {
-        $sql = 'SELECT * FROM users WHERE user_name LIKE %'.$keyword.'%'. ' OR user_email LIKE %'.$keyword.'%';
-        $user = $this->select($sql);
-
-        return $user;
+    public function findUser($keyword)
+    {
+        $keyword = "%$keyword%";
+        $sql = 'SELECT * FROM users WHERE name LIKE ? OR email LIKE ?';
+        $stmt = self::$_connection->prepare($sql);
+        $stmt->bind_param('ss', $keyword, $keyword);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $rows = [];
+        while ($row = $result->fetch_assoc()) {
+            $rows[] = $row;
+        }
+        $stmt->close();
+        return $rows;
     }
 
     /**
@@ -24,53 +42,80 @@ class UserModel extends BaseModel {
      * @param $password
      * @return array
      */
-    public function auth($userName, $password) {
-        $md5Password = md5($password);
-        $sql = 'SELECT * FROM users WHERE name = "' . $userName . '" AND password = "'.$md5Password.'"';
+    public function auth($userName, $password)
+    {
+        $sql = 'SELECT * FROM users WHERE name = ?';
+        $stmt = self::$_connection->prepare($sql);
+        $stmt->bind_param('s', $userName);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $user = $result->fetch_assoc();
+        $stmt->close();
 
-        $user = $this->select($sql);
-        return $user;
+        if ($user && password_verify($password, $user['password'])) {
+            return [$user];
+        }
+        return [];
     }
 
     /**
      * Delete user by id
      * @param $id
-     * @return mixed
+     * @return bool
      */
-    public function deleteUserById($id) {
-        $sql = 'DELETE FROM users WHERE id = '.$id;
-        return $this->delete($sql);
-
+    public function deleteUserById($id)
+    {
+        $sql = 'DELETE FROM users WHERE id = ?';
+        $stmt = self::$_connection->prepare($sql);
+        $stmt->bind_param('i', $id);
+        $result = $stmt->execute();
+        $stmt->close();
+        return $result;
     }
 
     /**
      * Update user
      * @param $input
-     * @return mixed
+     * @return bool
      */
-    public function updateUser($input) {
-        $sql = 'UPDATE users SET 
-                 name = "' . mysqli_real_escape_string(self::$_connection, $input['name']) .'", 
-                 password="'. md5($input['password']) .'"
-                WHERE id = ' . $input['id'];
+    public function updateUser($input)
+    {
+        $hashedPassword = !empty($input['password']) ? password_hash($input['password'], PASSWORD_DEFAULT) : null;
+        $sql = 'UPDATE users SET name = ?';
+        $params = 's';
+        $bindValues = [&$input['name']];
 
-        $user = $this->update($sql);
+        if ($hashedPassword) {
+            $sql .= ', password = ?';
+            $params .= 's';
+            $bindValues[] = &$hashedPassword;
+        }
 
-        return $user;
+        $sql .= ' WHERE id = ?';
+        $params .= 'i';
+        $bindValues[] = &$input['id'];
+
+        $stmt = self::$_connection->prepare($sql);
+        $stmt->bind_param($params, ...$bindValues);
+        $result = $stmt->execute();
+        $stmt->close();
+        return $result;
     }
 
     /**
      * Insert user
      * @param $input
-     * @return mixed
+     * @return bool
      */
-    public function insertUser($input) {
-        $sql = "INSERT INTO `app_web1`.`users` (`name`, `password`) VALUES (" .
-                "'" . $input['name'] . "', '".md5($input['password'])."')";
-
-        $user = $this->insert($sql);
-
-        return $user;
+    public function insertUser($input)
+    {
+        $hashedPassword = password_hash($input['password'], PASSWORD_DEFAULT);
+        $sql = 'INSERT INTO users (name, password) VALUES (?, ?)';
+        $stmt = self::$_connection->prepare($sql);
+        $stmt->bind_param('ss', $input['name'], $hashedPassword);
+        $result = $stmt->execute();
+        $stmt->close();
+        return $result;
     }
 
     /**
@@ -78,23 +123,32 @@ class UserModel extends BaseModel {
      * @param array $params
      * @return array
      */
-    public function getUsers($params = []) {
-        //Keyword
+    public function getUsers($params = [])
+    {
         if (!empty($params['keyword'])) {
-            $sql = 'SELECT * FROM users WHERE name LIKE "%' . $params['keyword'] .'%"';
-
-            //Keep this line to use Sql Injection
-            //Don't change
-            //Example keyword: abcef%";TRUNCATE banks;##
-            $users = self::$_connection->multi_query($sql);
-
-            //Get data
-            $users = $this->query($sql);
+            $keyword = '%' . $params['keyword'] . '%';
+            $sql = 'SELECT * FROM users WHERE name LIKE ?';
+            $stmt = self::$_connection->prepare($sql);
+            $stmt->bind_param('s', $keyword);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $users = [];
+            while ($row = $result->fetch_assoc()) {
+                $users[] = $row;
+            }
+            $stmt->close();
+            return $users;
         } else {
             $sql = 'SELECT * FROM users';
-            $users = $this->select($sql);
+            $stmt = self::$_connection->prepare($sql);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $users = [];
+            while ($row = $result->fetch_assoc()) {
+                $users[] = $row;
+            }
+            $stmt->close();
+            return $users;
         }
-
-        return $users;
     }
 }
