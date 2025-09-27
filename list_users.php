@@ -1,13 +1,17 @@
 <?php
-// Start the session
-session_start();
+require_once 'init_session.php';
+
+if (empty($_SESSION['id']) || empty($_SESSION['username'])) {
+    header('location: login.php');
+    exit;
+}
 
 require_once 'models/UserModel.php';
 $userModel = new UserModel();
 
 $params = [];
 if (!empty($_GET['keyword'])) {
-    $params['keyword'] = $_GET['keyword'];
+    $params['keyword'] = trim(strip_tags($_GET['keyword'])); // Strip tags cho keyword
 }
 
 $users = $userModel->getUsers($params);
@@ -25,8 +29,7 @@ $users = $userModel->getUsers($params);
     <div class="container">
         <?php if (!empty($users)) { ?>
             <div class="alert alert-warning" role="alert">
-                List of users! <br>
-                Hacker: http://php.local/list_users.php?keyword=ASDF%25%22%3BTRUNCATE+banks%3B%23%23
+                List of users!
             </div>
             <table class="table table-striped">
                 <thead>
@@ -41,19 +44,18 @@ $users = $userModel->getUsers($params);
                 <tbody>
                     <?php foreach ($users as $user) { ?>
                         <tr>
-                            <th scope="row"><?php echo $user['id'] ?></th>
-                            <td><?php echo htmlspecialchars($user['name'], ENT_QUOTES, 'UTF-8') ?></td>
-                            <td><?php echo htmlspecialchars($user['fullname'], ENT_QUOTES, 'UTF-8') ?></td>
-                            <td><?php echo htmlspecialchars($user['type'], ENT_QUOTES, 'UTF-8') ?></td>
-
+                            <th scope="row"><?php echo htmlspecialchars($user['id']); ?></th>
+                            <td><?php echo htmlspecialchars($user['name']); ?></td>
+                            <td><?php echo htmlspecialchars($user['fullname'] ?? ''); ?></td>
+                            <td><?php echo htmlspecialchars($user['type'] ?? ''); ?></td>
                             <td>
-                                <a href="form_user.php?id=<?php echo (int)$user['id'] ?>">
+                                <a href="form_user.php?id=<?php echo htmlspecialchars($user['id']); ?>">
                                     <i class="fa fa-pencil-square-o" aria-hidden="true" title="Update"></i>
                                 </a>
-                                <a href="view_user.php?id=<?php echo (int)$user['id'] ?>">
+                                <a href="view_user.php?id=<?php echo htmlspecialchars($user['id']); ?>">
                                     <i class="fa fa-eye" aria-hidden="true" title="View"></i>
                                 </a>
-                                <a href="delete_user.php?id=<?php echo (int)$user['id'] ?>">
+                                <a href="delete_user.php?id=<?php echo htmlspecialchars($user['id']); ?>">
                                     <i class="fa fa-eraser" aria-hidden="true" title="Delete"></i>
                                 </a>
                             </td>
@@ -63,7 +65,7 @@ $users = $userModel->getUsers($params);
             </table>
         <?php } else { ?>
             <div class="alert alert-dark" role="alert">
-                This is a dark alert—check it out!
+                No users found!
             </div>
         <?php } ?>
     </div>

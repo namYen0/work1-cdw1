@@ -1,28 +1,36 @@
 <?php
-// Start the session
-session_start();
+require_once 'init_session.php';
+
+if (empty($_SESSION['id']) || empty($_SESSION['username'])) {
+    header('location: login.php');
+    exit;
+}
+
 require_once 'models/UserModel.php';
 $userModel = new UserModel();
 
-$user = NULL; //Add new user
-$_id = NULL;
+$user = NULL;
+$_id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 
-if (!empty($_GET['id'])) {
-    $_id = $_GET['id'];
-    $user = $userModel->findUserById($_id); //Update existing user
+if ($_id !== false && $_id !== null) {
+    $user = $userModel->findUserById($_id);
 }
-
 
 if (!empty($_POST['submit'])) {
+    $data = [
+        'id' => filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT),
+        'name' => trim(strip_tags($_POST['name'] ?? '')), // Strip tags để loại HTML/JS
+        'password' => $_POST['password'] ?? ''
+    ];
 
-    if (!empty($_id)) {
-        $userModel->updateUser($_POST);
+    if ($_id !== null && $_id !== false) {
+        $userModel->updateUser($data);
     } else {
-        $userModel->insertUser($_POST);
+        $userModel->insertUser($data);
     }
     header('location: list_users.php');
+    exit;
 }
-
 ?>
 <!DOCTYPE html>
 <html>
@@ -36,16 +44,15 @@ if (!empty($_POST['submit'])) {
     <?php include 'views/header.php' ?>
     <div class="container">
 
-        <?php if ($user || !isset($_id)) { ?>
+        <?php if ($user || $_id === null) { ?>
             <div class="alert alert-warning" role="alert">
                 User form
             </div>
             <form method="POST">
-                <input type="hidden" name="id" value="<?php echo (int)$_id ?>">
+                <input type="hidden" name="id" value="<?php echo htmlspecialchars($_id ?? ''); ?>">
                 <div class="form-group">
                     <label for="name">Name</label>
-                    <input class="form-control" name="name" placeholder="Name"
-                        value="<?php echo !empty($user[0]['name']) ? htmlspecialchars($user[0]['name'], ENT_QUOTES, 'UTF-8') : '' ?>">
+                    <input class="form-control" name="name" placeholder="Name" value='<?php echo htmlspecialchars($user[0]['name'] ?? ''); ?>'>
                 </div>
                 <div class="form-group">
                     <label for="password">Password</label>

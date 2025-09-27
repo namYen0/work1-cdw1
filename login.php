@@ -1,29 +1,31 @@
 <?php
-// Start the session
-session_start();
+require_once 'init_session.php'; // Thay session_start() bằng include này
 
 require_once 'models/UserModel.php';
 $userModel = new UserModel();
 
-
 if (!empty($_POST['submit'])) {
-    $users = [
-        'username' => $_POST['username'],
-        'password' => $_POST['password']
-    ];
-    $user = NULL;
-    if ($user = $userModel->auth($users['username'], $users['password'])) {
-        //Login successful
+    $username = trim(strip_tags($_POST['username'] ?? '')); // Thêm strip_tags chống tag HTML
+    $password = trim($_POST['password'] ?? '');
+
+    $user = $userModel->auth($username, $password);
+
+    if ($user) {
+        // Regenerate session ID to prevent fixation
+        session_regenerate_id(true);
+
+        // Bind session with user
         $_SESSION['id'] = $user[0]['id'];
+        $_SESSION['username'] = $user[0]['name'];
 
         $_SESSION['message'] = 'Login successful';
         header('location: list_users.php');
+        exit;
     } else {
-        //Login failed
+        // Login failed
         $_SESSION['message'] = 'Login failed';
     }
 }
-
 ?>
 <!DOCTYPE html>
 <html>
@@ -49,10 +51,7 @@ if (!empty($_POST['submit'])) {
 
                         <div class="margin-bottom-25 input-group">
                             <span class="input-group-addon"><i class="glyphicon glyphicon-user"></i></span>
-                            <input id="login-username" type="text" class="form-control" name="username"
-                                value="<?php echo isset($_POST['username']) ? htmlspecialchars($_POST['username'], ENT_QUOTES, 'UTF-8') : '' ?>"
-                                placeholder="username or email">
-
+                            <input id="login-username" type="text" class="form-control" name="username" value="" placeholder="username or email">
                         </div>
 
                         <div class="margin-bottom-25 input-group">

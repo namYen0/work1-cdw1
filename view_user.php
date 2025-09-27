@@ -1,26 +1,30 @@
 <?php
+require_once 'init_session.php';
+
+if (empty($_SESSION['id']) || empty($_SESSION['username'])) {
+    header('location: login.php');
+    exit;
+}
+
 require_once 'models/UserModel.php';
 $userModel = new UserModel();
 
-$user = NULL; //Add new user
-$id = NULL;
+$user = NULL;
+$id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 
-if (!empty($_GET['id'])) {
-    $id = $_GET['id'];
-    $user = $userModel->findUserById($id); //Update existing user
+if ($id !== false && $id !== null) {
+    $user = $userModel->findUserById($id);
 }
 
-
 if (!empty($_POST['submit'])) {
-
-    if (!empty($id)) {
+    if ($id !== null) {
         $userModel->updateUser($_POST);
     } else {
         $userModel->insertUser($_POST);
     }
     header('location: list_users.php');
+    exit;
 }
-
 ?>
 <!DOCTYPE html>
 <html>
@@ -34,23 +38,24 @@ if (!empty($_POST['submit'])) {
     <?php include 'views/header.php' ?>
     <div class="container">
 
-        <?php if ($user || empty($id)) { ?>
+        <?php if ($user || $id === null) { ?>
             <div class="alert alert-warning" role="alert">
                 User profile
             </div>
             <form method="POST">
-                <input type="hidden" name="id" value="<?php echo (int)$id ?>">
+                <input type="hidden" name="id" value="<?php echo htmlspecialchars($id ?? ''); ?>">
                 <div class="form-group">
                     <label for="name">Name</label>
-                    <span><?php if (!empty($user[0]['name'])) echo htmlspecialchars($user[0]['name'], ENT_QUOTES, 'UTF-8') ?></span>
-                    <div class="form-group">
-                        <label for="password">Fullname</label>
-                        <span><?php if (!empty($user[0]['fullname'])) echo htmlspecialchars($user[0]['fullname'], ENT_QUOTES, 'UTF-8') ?></span>
-                    </div>
-                    <div class="form-group">
-                        <label for="password">Email</label>
-                        <span><?php if (!empty($user[0]['email'])) echo htmlspecialchars($user[0]['email'], ENT_QUOTES, 'UTF-8') ?></span>
-                    </div>
+                    <span><?php echo htmlspecialchars($user[0]['name'] ?? ''); ?></span>
+                </div>
+                <div class="form-group">
+                    <label for="fullname">Fullname</label>
+                    <span><?php echo htmlspecialchars($user[0]['fullname'] ?? ''); ?></span>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <span><?php echo htmlspecialchars($user[0]['email'] ?? ''); ?></span>
+                </div>
             </form>
         <?php } else { ?>
             <div class="alert alert-success" role="alert">

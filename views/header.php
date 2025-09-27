@@ -1,12 +1,12 @@
 <?php
 $id = '';
 if (!empty($_SESSION['id'])) {
-    $id = (int)$_SESSION['id'];
+    $id = $_SESSION['id'];
 }
 
 $keyword = '';
 if (!empty($_GET['keyword'])) {
-    $keyword = $_GET['keyword'];
+    $keyword = strip_tags($_GET['keyword']); // Strip tags cho keyword
 }
 ?>
 <div class="container">
@@ -28,10 +28,10 @@ if (!empty($_GET['keyword'])) {
                 <li><a href="form_user.php">Add new user</a></li>
 
             </ul>
-            <form class="navbar-form navbar-left">
+            <form class="navbar-form navbar-left" action="list_users.php" method="GET">
                 <div class="form-group">
                     <input type="text" name="keyword" class="form-control" placeholder="Search users"
-                        value="<?php echo htmlspecialchars($keyword, ENT_QUOTES, 'UTF-8') ?>">
+                        value="<?php echo htmlspecialchars($keyword); ?>">
                 </div>
                 <button type="submit" class="btn btn-default">Search</button>
             </form>
@@ -42,7 +42,7 @@ if (!empty($_GET['keyword'])) {
                         Account <span class="caret"></span>
                     </a>
                     <ul class="dropdown-menu">
-                        <li><a href="view_user.php?id=<?php echo $id ?>">Profile</a></li>
+                        <li><a href="view_user.php?id=<?php echo htmlspecialchars($id); ?>">Profile</a></li>
                         <li role="separator" class="divider"></li>
                         <li><a href="login.php">Login</a></li>
                         <li><a href="logout.php">Logout</a></li>
@@ -54,8 +54,7 @@ if (!empty($_GET['keyword'])) {
     <?php if (!empty($_SESSION['message'])) { ?>
         <div class="alert alert-warning" role="alert">
             <?php
-            // escape session message
-            echo htmlspecialchars($_SESSION['message'], ENT_QUOTES, 'UTF-8');
+            echo htmlspecialchars($_SESSION['message']);
             unset($_SESSION['message']);
             ?>
         </div>
